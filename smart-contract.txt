@@ -1,0 +1,374 @@
+pragma solidity >0.5.0;
+contract silika{
+
+struct dom{
+uint dom_id;
+address payable owner;
+bool zalog;
+uint plob;
+string type_obj;
+uint srok;
+}
+
+struct sell
+{
+uint sell_id;
+uint dom_id;
+address payable owner;
+address payable customer;
+uint amount;
+uint srok;
+
+}
+struct dar
+{
+uint dar_id;
+uint dom_id;
+address payable renter;
+uint time;
+}
+struct zalog
+{
+uint zalog_id;
+uint dom_id;
+address payable customer;
+uint amount;
+uint srok;
+uint srok_zaloga;
+address payable customer2;
+}
+
+struct users
+{
+
+bool nal;
+
+}
+
+
+dar[] my_dar;
+dom[] my_dom;
+zalog[] my_zalog;
+address admin = msg.sender;
+sell[] my_sell;
+address payable null_address = 0x0000000000000000000000000000000000000000;
+mapping (address => users)user;
+
+
+function auth_check(address addr) public{
+    
+    require(addr==admin);
+    
+}
+
+
+function admin_for() public{
+    
+    require(msg.sender==admin);
+}
+
+
+function add_user(address addr) public{
+    
+    require(msg.sender==admin);
+    user[addr].nal=true;
+    
+}
+
+function delete_user(address addr) public{
+    
+    require(msg.sender==admin);
+    delete user[addr];
+    
+}
+
+function check_user(address addr) public view returns(bool) {
+    
+    return(user[addr].nal);
+    
+}
+
+
+
+function trans(address payable customer) public payable{
+    
+    
+   customer.transfer(msg.value);
+    
+}
+
+
+function create_dar (uint _dom_id, address payable _renter, uint _time) public {
+require(msg.sender == my_dom[_dom_id].owner);
+require(_renter != my_dom[_dom_id].owner);
+require(my_dom[_dom_id].zalog != true, "eto v zaloge");
+my_dar.push(dar(my_dar.length, _dom_id,_renter, _time*24*60*60 + now));
+}
+
+function delete_dar(uint _dar_id) public{
+    
+    
+    delete my_dar[_dar_id];
+    
+}
+
+
+function dar_number() public view returns (uint)
+{
+return my_dar.length;
+}
+
+function get_dar (uint _dar_id, uint srok) public payable {
+require (msg.sender == my_dar[_dar_id].renter);
+require (msg.value ==0);
+
+my_dom[my_dar[_dar_id].dom_id].srok = srok;
+my_dom[my_dar[_dar_id].dom_id].owner = my_dar[_dar_id].renter;
+delete my_dar[_dar_id];
+}
+
+function check_dar (uint _dar_id) public view returns (uint, uint, address, uint){
+return (my_dar[_dar_id].dar_id,
+my_dar[_dar_id].dom_id,
+my_dar[_dar_id].renter,
+my_dar[_dar_id].time);
+}
+
+function stop_dar (uint _dar_id) public{
+require(msg.sender == my_dom[my_dar[_dar_id].dom_id].owner);
+require(my_dar[_dar_id].renter != null_address);
+
+delete my_dar[_dar_id];
+
+}
+
+
+function dar_cancel (uint _dar_id) public{
+require (msg.sender == my_dar[_dar_id].renter);
+delete my_dar[_dar_id];
+}
+
+
+    
+
+
+
+
+
+function create_dom (address payable _owner,uint _plob, string memory _type_obj, uint _srok) public {
+require(msg.sender==admin);
+uint id=dom_number();
+
+my_dom.push(dom(id, _owner, false, _plob, _type_obj,  _srok));
+
+}
+
+function delete_dom (uint _dom_id) public {
+require (msg.sender == my_dom[_dom_id].owner);
+delete my_dom[_dom_id];
+}
+
+function dom_number() public view returns (uint)
+{
+return my_dom.length;
+}
+
+
+function set_srok(uint dom_id, uint srok) public{
+    
+    my_dom[dom_id].srok = srok;
+    
+}
+
+function check_dom (uint _dom_id) public view returns (uint, address, bool, uint, string memory, uint) {
+
+
+
+return (my_dom[_dom_id].dom_id,
+my_dom[_dom_id].owner,
+my_dom[_dom_id].zalog,
+my_dom[_dom_id].plob,
+my_dom[_dom_id].type_obj,
+my_dom[_dom_id].srok);
+}
+
+
+function create_sell (uint _dom_id, uint _amount, uint _srok) public {
+require(msg.sender == my_dom[_dom_id].owner);
+require(my_dom[_dom_id].zalog != true, "eto v zaloge");
+my_sell.push(sell(my_sell.length, _dom_id, my_dom[_dom_id].owner, null_address, _amount, _srok ));
+
+}
+
+function delete_sell (uint _sell_id) public{
+    
+my_sell[_sell_id].customer.transfer(my_sell[_sell_id].amount);
+delete my_sell[_sell_id];
+}
+
+
+function sell_number() public view returns (uint)
+{
+return my_sell.length;
+}
+
+function check_sell (uint _sell_id) public view returns (uint, uint, address, address, uint, uint)
+{
+return(my_sell[_sell_id].sell_id,
+my_sell[_sell_id].dom_id,
+my_sell[_sell_id].owner,
+my_sell[_sell_id].customer,
+my_sell[_sell_id].amount,
+my_sell[_sell_id].srok);
+}
+
+function buy(uint _sell_id) public payable
+{
+require (my_dom[my_sell[_sell_id].dom_id].owner != null_address);
+require (msg.sender!= my_dom[my_sell[_sell_id].dom_id].owner);
+require (msg.value == my_sell[_sell_id].amount);
+
+require (my_sell[_sell_id].customer == null_address);
+my_sell[_sell_id].customer = msg.sender;
+}
+
+function money_back(uint _sell_id) public payable
+{
+require(my_sell[_sell_id].customer == msg.sender);
+my_sell[_sell_id].customer.transfer(my_sell[_sell_id].amount);
+my_sell[_sell_id].customer = null_address;
+
+
+}
+
+function take_money(uint _sell_id, uint srok) public payable
+{
+require(my_sell[_sell_id].customer != null_address);
+require(msg.sender == my_dom[my_sell[_sell_id].dom_id].owner);
+msg.sender.transfer(my_sell[_sell_id].amount);
+
+
+my_dom[my_sell[_sell_id].dom_id].owner = my_sell[_sell_id].customer;
+my_dom[my_sell[_sell_id].dom_id].srok = srok;
+delete my_sell[_sell_id];
+}
+
+function cancel_sell (uint _sell_id) public payable{
+require(my_sell[_sell_id].customer == msg.sender);
+
+my_sell[_sell_id].customer.transfer(my_sell[_sell_id].amount);
+my_sell[_sell_id].customer = null_address;
+
+
+}
+
+function stop_sell (uint _sell_id) public payable{
+
+require(msg.sender == my_dom[my_sell[_sell_id].dom_id].owner);
+require(my_sell[_sell_id].customer != null_address);
+
+my_sell[_sell_id].customer.transfer(my_sell[_sell_id].amount);
+my_sell[_sell_id].customer = null_address;
+
+}
+
+
+function zalog_number() public view returns (uint) {
+    
+    return my_zalog.length;
+    
+}
+
+
+function create_zalog (uint _dom_id, uint _amount, uint _srok, uint srok_zaloga) public {
+require(msg.sender == my_dom[_dom_id].owner);
+require(my_dom[_dom_id].zalog != true, "uzhe v zaloge");
+my_zalog.push(zalog(zalog_number(), _dom_id, null_address, _amount, _srok + now, srok_zaloga, my_dom[_dom_id].owner));
+
+}
+
+
+function delete_zalog(uint id_zalog) public{
+    
+    my_dom[my_zalog[id_zalog].dom_id].zalog = false;
+    my_zalog[id_zalog].customer.transfer(my_zalog[id_zalog].amount);
+    delete my_zalog[id_zalog];
+    
+}
+
+function buy_zalog(uint _zalog_id) public payable
+{
+require (msg.sender!= my_dom[my_zalog[_zalog_id].dom_id].owner);
+require (msg.value == my_zalog[_zalog_id].amount);
+require (my_zalog[_zalog_id].customer == null_address);
+my_zalog[_zalog_id].customer = msg.sender;
+}
+
+function take_money_for_zalog(uint _zalog_id) public payable
+{
+require(my_zalog[_zalog_id].customer != null_address);
+require(msg.sender == my_zalog[_zalog_id].customer2);
+require(my_dom[my_zalog[_zalog_id].dom_id].zalog==false);
+msg.sender.transfer(my_zalog[_zalog_id].amount);
+
+my_zalog[_zalog_id].customer2 = my_dom[my_zalog[_zalog_id].dom_id].owner;
+my_dom[my_zalog[_zalog_id].dom_id].owner = my_zalog[_zalog_id].customer;
+my_dom[my_zalog[_zalog_id].dom_id].zalog=true;
+}
+
+function return_money_for_zalog(uint _zalog_id) public payable
+{
+require(my_dom[my_zalog[_zalog_id].dom_id].zalog==true);
+require(msg.sender == my_zalog[_zalog_id].customer2, "ssss");
+require (msg.value == my_zalog[_zalog_id].amount, "zzzzz");
+
+my_zalog[_zalog_id].customer.transfer(my_zalog[_zalog_id].amount);
+my_dom[my_zalog[_zalog_id].dom_id].owner = my_zalog[_zalog_id].customer2;
+my_dom[my_zalog[_zalog_id].dom_id].zalog=false;
+delete my_zalog[_zalog_id];
+}
+
+
+function stop_zalog (uint _zalog_id) public payable{
+
+require(msg.sender == my_dom[my_zalog[_zalog_id].dom_id].owner);
+require(my_dom[my_zalog[_zalog_id].dom_id].zalog==false);
+if (my_zalog[_zalog_id].customer != null_address)
+{
+my_zalog[_zalog_id].customer.transfer(my_zalog[_zalog_id].amount);
+delete my_zalog[_zalog_id];
+
+}
+
+
+}
+
+function check_zalog (uint _zalog_id) public view returns (uint, uint, address, address, uint, uint)
+{
+return(my_zalog[_zalog_id].zalog_id,
+my_zalog[_zalog_id].dom_id,
+my_zalog[_zalog_id].customer2,
+my_zalog[_zalog_id].customer,
+my_zalog[_zalog_id].amount,
+my_zalog[_zalog_id].srok_zaloga);
+}
+
+function money_back_for_zalog(uint _zalog_id) public payable
+{
+require(my_zalog[_zalog_id].customer == msg.sender);
+require(my_dom[my_zalog[_zalog_id].dom_id].zalog==false);
+my_zalog[_zalog_id].customer.transfer(my_zalog[_zalog_id].amount);
+delete my_zalog[_zalog_id];
+
+}
+
+
+function out_zalog(uint id_zalog) public{
+    
+    my_dom[my_zalog[id_zalog].dom_id].zalog = false;
+    delete_zalog(id_zalog);
+    
+    
+}
+
+}
